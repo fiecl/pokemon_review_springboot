@@ -1,12 +1,12 @@
 package com.pokemonreview.api.models;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Data // generates getters, setters, and even constructor
 @AllArgsConstructor
@@ -18,6 +18,11 @@ public class Pokemon {
     private int id;
     private String name;
     private String type;
+
+    // orphanRemoval: If our Pokemon is gone, we also want the review to be gone too
+    @OneToMany(mappedBy = "pokemon", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Review> reviews = new ArrayList<Review>();
+
 
 //    public Pokemon(int id, String name, String type) {
 //        this.id = id;

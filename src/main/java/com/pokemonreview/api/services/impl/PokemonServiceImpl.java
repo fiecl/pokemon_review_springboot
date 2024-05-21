@@ -1,10 +1,15 @@
 package com.pokemonreview.api.services.impl;
 
 import com.pokemonreview.api.dto.PokemonDto;
+import com.pokemonreview.api.dto.PokemonResponse;
+import com.pokemonreview.api.exceptions.PokemonNotFoundException;
 import com.pokemonreview.api.models.Pokemon;
 import com.pokemonreview.api.repository.PokemonRepository;
 import com.pokemonreview.api.services.PokemonService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -36,11 +41,47 @@ public class PokemonServiceImpl implements PokemonService {
     }
 
     @Override
-    public List<PokemonDto> getAllPokemon() {
-        List<Pokemon> pokemon = pokemonRepository.findAll();
+    public PokemonResponse getAllPokemon(int pageNo, int pageSize) {
+        Pageable pageable = PageRequest.of(pageNo, pageSize);
+        Page<Pokemon> pokemons = pokemonRepository.findAll(pageable);
+        List<Pokemon> listOfPokemon = pokemons.getContent();
+
         // stream: Data structure that can be manipulated by the Stream API
         // stream API: we use as alternative for for-loops
-        return pokemon.stream().map(p -> mapToDto(p)).collect(Collectors.toList()); // collect: Turns to a list
+        List<PokemonDto> content = listOfPokemon.stream().map(p -> mapToDto(p)).collect(Collectors.toList()); // collect: Turns to a list
+
+        PokemonResponse pokemonResponse = new PokemonResponse();
+        pokemonResponse.setContent(content);
+        pokemonResponse.setPageNo(pokemons.getNumber());
+        pokemonResponse.setPageSize(pokemons.getSize());
+        pokemonResponse.setTotalElements(pokemons.getTotalElements());
+        pokemonResponse.setTotalPages(pokemons.getTotalPages());
+        pokemonResponse.setLast(pokemons.isLast());
+
+        return pokemonResponse;
+    }
+
+    @Override
+    public PokemonDto getPokemonById(int id) {
+        Pokemon pokemon = pokemonRepository.findById(id).orElseThrow(() -> new PokemonNotFoundException("Pokemon could not be found"));
+        return mapToDto(pokemon);
+    }
+
+    @Override
+    public PokemonDto updatePokemon(PokemonDto pokemonDto, int id) {
+        Pokemon pokemon = pokemonRepository.findById(id).orElseThrow(() -> new PokemonNotFoundException("Pokemon could not be updated"));
+
+        pokemon.setName(pokemonDto.getName());
+        pokemon.setType(pokemonDto.getType());
+
+        Pokemon updatedPokemon = pokemonRepository.save(pokemon); // Note that we're saving the "Pokemon" here, not the "PokemonDto"
+        return mapToDto(updatedPokemon);
+    }
+
+    @Override
+    public void deletePokemon(int id) {
+        Pokemon pokemon = pokemonRepository.findById(id).orElseThrow(() -> new PokemonNotFoundException("Pokemon could not be deleted"));
+        pokemonRepository.delete(pokemon);
     }
 
     // Mapper where it takes one object and turns it into dto and vice versa
